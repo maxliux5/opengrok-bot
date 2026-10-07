@@ -1,0 +1,38 @@
+services:
+  desktop:
+    build:
+      context: ../..
+      dockerfile: infra/desktop/Dockerfile
+      args:
+        http_proxy: ${http_proxy:-}
+        https_proxy: ${https_proxy:-}
+        no_proxy: ${no_proxy:-}
+    image: opengrok-desktop:0.1.0
+    container_name: opengrok-desktop
+    restart: "no"
+    init: true
+    shm_size: 1gb
+    env_file: ../../.local/desktop.env
+    environment:
+      OPENGROK_BROWSER_PROXY: gateway
+      OPENGROK_EGRESS_PORT: ${OPENGROK_EGRESS_PORT:-3888}
+    volumes:
+      - desktop_home:/home/muse
+      - desktop_workspace:/workspace
+    ports:
+      - "127.0.0.1:3843:3843"
+      - "127.0.0.1:6080:6080"
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp_profile.json
+    cap_drop:
+      - NET_RAW
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3843/health',{headers:{authorization:'Bearer '+process.env.OPENGROK_RUNTIME_TOKEN}}).then(r=>r.json()).then(x=>process.exit(x.ready?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  desktop_home:
+  desktop_workspace:

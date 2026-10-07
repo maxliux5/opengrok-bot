@@ -1,0 +1,10 @@
+node_modules
+.local
+.tools
+.git
+apps/web
+apps/api
+apps/worker
+packages
+!packages/network-policy
+!packages/network-policy/public-url.mjs

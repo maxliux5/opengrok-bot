@@ -1,0 +1,15 @@
+{
+  "name": "@opengrok/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@opengrok/core": "workspace:*",
+    "ai": "7.0.126"
+  }
+}

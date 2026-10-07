@@ -1,0 +1,27 @@
+{
+  "name": "opengrok-bot",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.5.1",
+  "scripts": {
+    "dev:web": "pnpm --filter @opengrok/web dev",
+    "dev:api": "pnpm --filter @opengrok/api dev",
+    "dev:worker": "pnpm --filter @opengrok/worker dev",
+    "dev:host": "pnpm --filter @opengrok/computer-host dev",
+    "dev:init": "node scripts/init-dev-env.mjs",
+    "tls:init": "node scripts/init-local-tls.mjs",
+    "serve:web": "node scripts/start-web.mjs",
+    "dev:db": "docker compose -f infra/control/compose.yaml up -d",
+    "monitor": "node scripts/run-monitor.mjs",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "playwright": "1.63.0",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "7.3.1",
+    "vitest": "5.0.3"
+  }
+}

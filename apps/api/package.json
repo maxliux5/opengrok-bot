@@ -1,0 +1,23 @@
+{
+  "name": "@opengrok/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fastify/cookie": "11.1.2",
+    "@fastify/websocket": "11.3.3",
+    "@opengrok/contracts": "workspace:*",
+    "@opengrok/core": "workspace:*",
+    "fastify": "5.12.5",
+    "ws": "8.18.3",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/ws": "8.18.1"
+  }
+}

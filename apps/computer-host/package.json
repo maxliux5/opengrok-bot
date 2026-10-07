@@ -1,0 +1,16 @@
+{
+  "name": "@opengrok/computer-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@opengrok/contracts": "workspace:*",
+    "@opengrok/core": "workspace:*",
+    "fastify": "5.12.5",
+    "zod": "4.6.5"
+  }
+}
