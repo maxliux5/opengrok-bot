@@ -71,6 +71,37 @@ a { color: inherit; }
 .chat-empty { margin: auto; text-align: center; color: #677471; max-width: 310px; }
 .chat-empty h1 { margin: 14px 0 4px; font-size: 20px; font-weight: 650; color: #273231; }
 .chat-empty p { font-size: 12px; line-height: 1.6; margin: 0; }
+.onboarding { width: 100%; max-width: 620px; margin: 0 auto; min-width: 0; }
+.setup-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 24px; }
+.setup-heading h1 { margin: 0; font-size: 22px; line-height: 1.4; }
+.setup-heading p { margin: 5px 0 0; font-size: 12px; color: #74817c; }
+.setup-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid #dce4e0; margin-bottom: 24px; }
+.setup-steps button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 70px; border: 0; border-bottom: 2px solid transparent; padding: 8px 3px; background: transparent; color: #78837f; font-size: 12px; }
+.setup-steps button span { font-weight: 650; font-size: 13px; }
+.setup-steps button[aria-current="step"] { border-bottom-color: #19766d; color: #12685e; background: #edf6f1; }
+.setup-step-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; margin: 0 0 12px; }
+.setup-step-heading h2 { font-size: 16px; margin: 0; }
+.setup-checks { list-style: none; padding: 0; margin: 0 0 18px; }
+.setup-check { display: flex; align-items: flex-start; gap: 10px; padding: 12px 0; border-bottom: 1px solid #e7ece9; }
+.setup-check > svg { flex: 0 0 auto; margin-top: 2px; color: #257764; }
+.setup-check.error > svg { color: #ae4545; }
+.setup-check.warning > svg { color: #a4761f; }
+.setup-check.unchecked > svg { color: #82908b; }
+.setup-check > div { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.setup-check strong { font-size: 12px; font-weight: 600; }
+.setup-check span { color: #697772; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.setup-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.setup-actions button, .onboarding .primary-button, .onboarding .secondary-button, .model-test button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; }
+.setup-back { margin-top: 22px; display: inline-flex; align-items: center; gap: 6px; }
+.setup-existing { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid #e2e9e4; }
+.setup-selected { display: flex; align-items: center; gap: 10px; margin: 0 0 20px; color: #19766d; }
+.setup-selected div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.setup-selected strong { color: #263832; font-size: 14px; }
+.setup-selected span { color: #74817c; font-size: 12px; overflow-wrap: anywhere; }
+.setup-pending { display: flex; align-items: center; gap: 8px; min-height: 48px; font-size: 12px; color: #697772; }
+.model-fields { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.model-test { min-width: 0; }
+.model-test .setup-checks { margin-top: 10px; }
 .large-bot-mark { width: 52px; height: 52px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #dce8e3; color: #16766b; background: #ecf6f1; border-radius: 8px; }
 .activity-inline { display: flex; align-items: center; gap: 9px; color: #63736d; font-size: 12px; padding: 3px 0 0 39px; }
 .spinner { width: 13px; height: 13px; border: 2px solid #c7ded5; border-top-color: #16776d; border-radius: 50%; animation: spin 850ms linear infinite; }

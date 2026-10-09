@@ -5,7 +5,7 @@ import { defaultToolCapabilities, type Artifact, type Bot, type Conversation, ty
 import { query, transaction } from "./db.js";
 import { DomainError } from "./errors.js";
 import { decryptSecret, encryptSecret } from "./crypto.js";
-import { toolRegistry, type AgentToolName } from "./model.js";
+import { toolRegistry, validateModelConnection, type AgentToolName } from "./model.js";
 import { addEvent } from "./runs.js";
 
 type BotRow = {
@@ -206,18 +206,7 @@ export async function createModelProfile(ownerId: string, input: {
   baseUrl?: string | null; apiKey?: string;
   capabilities?: ModelProfile["capabilities"];
 }): Promise<ModelProfile> {
-  if (input.provider === "openai-compatible" && !input.baseUrl) {
-    throw new DomainError("请填写模型 API 地址");
-  }
-  if (input.provider === "anthropic" && !input.apiKey) {
-    throw new DomainError("Anthropic 协议需要 API Key", 422, "api_key_required");
-  }
-  if (input.baseUrl) {
-    const url = new URL(input.baseUrl);
-    if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) {
-      throw new DomainError("模型 API 地址需要 HTTPS；本机服务可使用 HTTP");
-    }
-  }
+  validateModelConnection(input);
   const id = randomUUID();
   await query(
     `INSERT INTO model_profiles(id,owner_id,name,provider,model_id,base_url,encrypted_api_key,capabilities_json)

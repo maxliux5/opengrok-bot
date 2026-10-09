@@ -257,6 +257,10 @@ computer-host 在受信持久目录维护按 operation ID 索引的执行回执�
 
 模型配置包含协议、模型 ID、端点、加密凭证及 `text/tools/vision/streaming` 能力声明；文本必需，旧配置默认关闭视觉。声明控制应用是否发送工具和图片，以及使用流式还是整段响应。声明由用户填写，不能代替供应商能力探测；OpenAI-compatible 地址也不自动获得完整兼容声明，必须跑工具结果、多模态和续接契约测试。
 
+2026-10-09 的首次使用向导复用现有模型、Bot、Run 和电脑控制 API，不新增引导状态表。没有 Bot 配置模型时自动打开；已保存实体支持刷新后继续配置。报告进入普通 Worker 状态机，接管沿用原控制权协议。环境诊断读取任务数据库、20 秒内的 Worker 心跳和 host 状态，并在成果目录进行一次临时写入/回读后删除；网页访问显示未验证，不借诊断占用电脑或发起网页请求。
+
+`model-probe.ts` 复用正式 provider adapter，只发送随机 nonce 与可选的无执行器测试工具，按声明使用流式或非流式调用。一次测试最多 20 秒、256 输出 token，不重试；API 进程内按 owner 限制单个在途请求，暂不提供跨 API 进程的全局限流。草稿测试不写模型配置或 Run，已保存配置按归属取出并仅在服务端解密。错误按鉴权、地址、限流、超时等类别脱敏，不返回上游响应体。测试能验证这次调用的文本回显或工具参数、流式结束；视觉、真实工具执行、长上下文和总体质量仍须独立验收。
+
 当前真实测试的支持等级：TraeX Gemini 经 OpenAI-compatible 协议完成流式文本、结构化工具、网页截图理解；TraeX Claude Sonnet 经 Anthropic 协议完成非流式文本和结构化工具，视觉/流式未测。同一 Bot 的新 Run 切换后复用了历史、Bot 私有记忆、电脑文件与浏览器 profile。两者共享 TraeX Proxy，协议切换已验证，独立供应商可用性仍需另测。冻结 12 题各运行 3 次，机械检查两模型均为 36/36，人工核查研究内容后分别为 Gemini 31/36、Claude 26/36；当前 30/36 发布门槛下 Claude 未通过，详见 [评测记录](eval/README.md)。成果校验要求实际读取的来源、标题和文件摘要，仍不能证明每条研究结论正确。
 
 Run 的 `maxTokens` 是下一模型步骤和工具派发的续跑阈值。供应商在模型调用结束后才返回本次 token 用量，因此在阈值下启动的最后一次调用可能使累计值越过阈值；当前基线已见 50,308 对 40,000 的情况。严格费用或总 token 上限需要调用前可用的输入计数与保守输出预留，现有机制不提供这项保证。
@@ -397,7 +401,9 @@ interface ToolGateway { execute(callId: ToolCallId): Promise<ToolOutcome>; }
 | `POST /v1/computer/control`、`DELETE /v1/computer/control/:id` | 接管、归还 |
 | `GET/PATCH/DELETE /v1/bots/:id/memories/:memoryId` | 读取、按 revision 编辑与删除 |
 | `GET /v1/artifacts/:id`、`GET /v1/artifacts/:id/content` | 查看元数据及认证下载 |
-| `POST /v1/model-profiles/:id/check` | 测试连接和能力，不回显密钥 |
+| `POST /api/onboarding/diagnostics` | 已实现：认证后检查环境，不返回内部路径或凭证 |
+| `POST /api/model-profiles/test` | 已实现：测试未保存配置，不持久化草稿密钥 |
+| `POST /api/model-profiles/:id/test` | 已实现：按归属测试已保存配置，不回显密钥 |
 
 所有边界通过 schema 校验和归属检查；WebSocket 另外检查来源、会话和租约。UI 请求中的 computer/bot/run ID 不能替代访问授权。首次引导仅开放本地入口，由一次性凭证建立 owner，部署外网前要求认证和 TLS。
 

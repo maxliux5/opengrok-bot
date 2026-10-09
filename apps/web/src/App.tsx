@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import {
-  Activity, AlertCircle, BookOpen, Bot as BotIcon, Brain, Check, ChevronDown, Clock3,
+  Activity, AlertCircle, BookOpen, Bot as BotIcon, Brain, Check, ChevronDown, Clock3, Compass,
   Download, Eye, FileText, GitBranch, History, Image as ImageIcon, KeyRound, LogOut, Maximize2, Menu,
   MessageSquare, Monitor, Pencil, Plus, Send, Settings2, Square, TerminalSquare, Trash2, X,
 } from "lucide-react";
@@ -11,6 +11,8 @@ import type { Routine, RoutineOccurrence } from "@opengrok/contracts";
 import { api, json, type BotResponse, type ConversationResponse, type SubmitResponse } from "./client";
 import Desktop from "./Desktop";
 import RoutinePane from "./Routines";
+import ModelProfileForm, { SavedModelTest } from "./ModelProfileForm";
+import Onboarding from "./Onboarding";
 
 type Phase = "loading" | "setup" | "login" | "ready";
 type Pane = "computer" | "artifacts" | "memories" | "skills" | "routines" | "approvals" | "activity";
@@ -176,15 +178,6 @@ function SettingsModal({ bot, profiles, githubConnector, onClose, onSaved, onPro
   const [instructions, setInstructions] = useState(bot.instructions);
   const [profileId, setProfileId] = useState(bot.modelProfileId || "");
   const [capabilities, setCapabilities] = useState<ToolCapability[]>(bot.capabilities);
-  const [profileName, setProfileName] = useState("");
-  const [provider, setProvider] = useState<"openai-compatible" | "anthropic">("openai-compatible");
-  const [modelId, setModelId] = useState("");
-  const [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1");
-  const [anthropicBaseUrl, setAnthropicBaseUrl] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [modelCapabilities, setModelCapabilities] = useState<ModelProfile["capabilities"]>({
-    text: true, tools: true, vision: false, streaming: true,
-  });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -200,19 +193,6 @@ function SettingsModal({ bot, profiles, githubConnector, onClose, onSaved, onPro
     finally { setSaving(false); }
   }
 
-  async function saveProfile(event: FormEvent) {
-    event.preventDefault(); setSaving(true); setError("");
-    try {
-      const result = await api<{ profile: ModelProfile }>("/model-profiles", json("POST", {
-        name: profileName, provider, modelId,
-        baseUrl: provider === "openai-compatible" ? baseUrl : anthropicBaseUrl || null,
-        apiKey, capabilities: modelCapabilities,
-      }));
-      onProfile(result.profile); setProfileId(result.profile.id); setApiKey(""); setTab("bot");
-    } catch (cause) { setError((cause as Error).message); }
-    finally { setSaving(false); }
-  }
-
   return <Modal title="Bot 设置" onClose={onClose}>
     <div className="modal-tabs"><button className={tab === "bot" ? "active" : ""} onClick={() => setTab("bot")}>Bot</button><button className={tab === "model" ? "active" : ""} onClick={() => setTab("model")}>模型配置</button></div>
     {tab === "bot" ? <form className="form-stack" onSubmit={saveBot}>
@@ -222,30 +202,14 @@ function SettingsModal({ bot, profiles, githubConnector, onClose, onSaved, onPro
       <label>模型<select value={profileId} onChange={event => setProfileId(event.target.value)}>
         <option value="">尚未选择</option>{profiles.map(item => <option key={item.id} value={item.id}>{item.name} · {item.modelId}</option>)}
       </select></label>
+      {profileId && <SavedModelTest key={profileId} profileId={profileId} />}
       <CapabilityControls value={capabilities} onChange={setCapabilities} githubConnector={githubConnector} />
       <button type="button" className="text-button" onClick={() => setTab("model")}><Plus size={15} /> 添加模型配置</button>
       {error && <div className="inline-error"><AlertCircle size={16} />{error}</div>}
       <button className="primary-button" disabled={saving}>{saving ? "保存中" : "保存 Bot"}</button>
-    </form> : <form className="form-stack" onSubmit={saveProfile}>
-      <label>配置名称<input value={profileName} onChange={event => setProfileName(event.target.value)} placeholder="例如：主模型" required /></label>
-      <label>供应商协议<select value={provider} onChange={event => setProvider(event.target.value as typeof provider)}>
-        <option value="openai-compatible">OpenAI 兼容接口</option><option value="anthropic">Anthropic</option>
-      </select></label>
-      <label>模型 ID<input value={modelId} onChange={event => setModelId(event.target.value)} placeholder="填写供应商提供的模型 ID" required /></label>
-      {provider === "openai-compatible" && <label>API 地址<input type="url" value={baseUrl} onChange={event => setBaseUrl(event.target.value)} required /></label>}
-      {provider === "anthropic" && <label>API 地址（可选）<input type="url" value={anthropicBaseUrl} onChange={event => setAnthropicBaseUrl(event.target.value)} placeholder="https://api.anthropic.com/v1" /></label>}
-      <label>API Key<input type="password" value={apiKey} onChange={event => setApiKey(event.target.value)} autoComplete="off" placeholder={provider === "anthropic" ? "必填" : "本机模型可留空"} required={provider === "anthropic"} /></label>
-      <fieldset className="capability-options"><legend>模型能力</legend>
-        <label><input type="checkbox" checked disabled />文本</label>
-        {(["tools", "vision", "streaming"] as const).map((key) => <label key={key}>
-          <input type="checkbox" checked={modelCapabilities[key]}
-            onChange={event => setModelCapabilities(current => ({ ...current, [key]: event.target.checked }))} />
-          {{ tools: "工具调用", vision: "视觉输入", streaming: "流式输出" }[key]}
-        </label>)}
-      </fieldset>
-      {error && <div className="inline-error"><AlertCircle size={16} />{error}</div>}
-      <button className="primary-button" disabled={saving}>{saving ? "保存中" : "保存配置"}</button>
-    </form>}
+    </form> : <ModelProfileForm onSaved={profile => {
+      onProfile(profile); setProfileId(profile.id); setTab("bot");
+    }} />}
   </Modal>;
 }
 
@@ -358,6 +322,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [newBotOpen, setNewBotOpen] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [handoffOpen, setHandoffOpen] = useState(false);
   const [composer, setComposer] = useState("");
   const [deliverable, setDeliverable] = useState<"answer" | "report">("answer");
@@ -378,6 +343,7 @@ export default function App() {
       api<{ configured: boolean; repository: string | null }>("/connectors/github"),
     ]);
     setBots(botResponse.bots); setProfiles(profileResponse.profiles); setGithubConnector(connectorResponse);
+    setOnboardingOpen(!botResponse.bots.some(bot => bot.modelProfileId));
     setSelectedBotId(current => botResponse.bots.some(item => item.id === current) ? current : botResponse.bots[0]?.id || null);
   }, []);
 
@@ -546,10 +512,10 @@ export default function App() {
     } catch (cause) { setToast((cause as Error).message); }
   }
 
-  async function sendMessage() {
-    if (!selectedBot || !selectedBot.modelProfileId || !composer.trim() || sending ||
-      deliverable === "report" && !canReport) return;
-    const text = composer.trim();
+  async function sendMessage(input = composer, format = deliverable): Promise<boolean> {
+    if (!selectedBot || !selectedBot.modelProfileId || !input.trim() || sending ||
+      format === "report" && !canReport) return false;
+    const text = input.trim();
     setSending(true);
     try {
       let conversationId = selectedConversationId;
@@ -560,12 +526,13 @@ export default function App() {
         setSelectedConversationId(conversationId);
       }
       const response = await api<SubmitResponse>(`/conversations/${conversationId}/messages`, json("POST", {
-        text, requestId: crypto.randomUUID(), deliverable,
+        text, requestId: crypto.randomUUID(), deliverable: format,
       }));
       setComposer(""); setSelectedRunId(response.run.id);
       await refreshConversation(conversationId);
       setSelectedRunId(response.run.id);
-    } catch (cause) { setToast((cause as Error).message); }
+      return true;
+    } catch (cause) { setToast((cause as Error).message); return false; }
     finally { setSending(false); }
   }
 
@@ -670,6 +637,9 @@ export default function App() {
         </button>)}
       </nav>
       <div className="sidebar-footer"><span>{username}</span><div className="sidebar-footer-actions">
+        <button className="icon-button" title="使用向导" onClick={() => {
+          setOnboardingOpen(true); setSidebarOpen(false); setMobileView("chat");
+        }}><Compass size={17} /></button>
         <button className="icon-button" title="修改密码" onClick={() => setPasswordOpen(true)}><KeyRound size={17} /></button>
         <button className="icon-button" title="退出登录" onClick={() => void signOut()}><LogOut size={17} /></button>
       </div></div>
@@ -685,7 +655,18 @@ export default function App() {
         </div>
       </header>
 
-      <div className="message-scroll" key={selectedConversationId || "empty"}>
+      <div className="message-scroll" key={onboardingOpen ? "onboarding" : selectedConversationId || "empty"}>
+        {onboardingOpen ? <Onboarding bots={bots} profiles={profiles} bot={selectedBot}
+          onProfile={profile => setProfiles(current => [profile, ...current])}
+          onBot={bot => { setBots(current => [bot, ...current.filter(item => item.id !== bot.id)]); setSelectedBotId(bot.id); setSelectedConversationId(null); }}
+          onChooseBot={id => { setSelectedBotId(id); setSelectedConversationId(null); }}
+          onReport={async text => {
+            const submitted = await sendMessage(text, "report");
+            if (submitted) setPane("artifacts");
+            return submitted;
+          }}
+          onComputer={() => { setPane("computer"); setMobileView("workspace"); }}
+          onClose={() => setOnboardingOpen(false)} /> : <>
         {!selectedConversationId && <div className="chat-empty"><span className="large-bot-mark"><BotIcon size={31} /></span><h1>{selectedBot?.name || "OpenGrok Bot"}</h1><p>{selectedBot?.description || "创建一个 Bot 后开始工作"}</p></div>}
         {selectedConversationId && groupedMessages.length === 0 && <div className="chat-empty"><span className="large-bot-mark"><MessageSquare size={29} /></span><h1>新对话</h1><p>{selectedBot?.description}</p></div>}
         {groupedMessages.map(item => <div className={`message ${item.role}`} key={item.id}>
@@ -697,16 +678,17 @@ export default function App() {
         {selectedRun?.status === "reconciling" && <div className="run-unknown"><strong>未核对的电脑操作</strong>{pendingEffects.map(item => <div key={item.operationId}><span>{item.name}</span><small>{String(item.args.url || item.args.command || item.args.ref || "")}</small><code>{item.operationId.slice(0, 8)}</code></div>)}<button className="secondary-button" onClick={() => void closeUnknownRun()}>保留未知结果并结束</button></div>}
         {selectedRun?.status === "failed" && <div className="run-error"><AlertCircle size={16} /><span>{selectedRun.error || "任务失败"}</span></div>}
         {selectedRun?.unresolvedEffects.length ? <div className="run-warning"><AlertCircle size={16} />执行已停止，{selectedRun.unresolvedEffects.length} 项外部结果待核对</div> : null}
+        </>}
       </div>
 
-      <div className="composer-area">
+      {!onboardingOpen && <div className="composer-area">
         {!selectedBot?.modelProfileId && <button className="model-hint" onClick={() => setSettingsOpen(true)}><AlertCircle size={15} />选择模型后开始任务</button>}
         <div className="composer-box"><textarea aria-label="发送消息" placeholder="给 Bot 一项任务" rows={2} value={composer} onChange={event => setComposer(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void sendMessage(); } }} />
           <div className="composer-toolbar"><div className="segmented" aria-label="交付形式"><button className={deliverable === "answer" ? "active" : ""} onClick={() => setDeliverable("answer")}>对话</button><button className={deliverable === "report" ? "active" : ""} onClick={() => setDeliverable("report")} disabled={!canReport} title={!canReport ? "需要网页浏览和成果发布能力" : undefined}>报告</button></div>
             <button className="send-button" title="发送任务" disabled={!composer.trim() || !selectedBot?.modelProfileId || sending} onClick={() => void sendMessage()}><Send size={17} /></button>
           </div>
         </div>
-      </div>
+      </div>}
     </main>
 
     <section className={`workspace-column ${mobileView !== "workspace" ? "mobile-hidden" : ""}`}>

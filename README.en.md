@@ -16,6 +16,12 @@ The first-account screens come from the managed workspace before any account was
 
 <img src="docs/screenshots/setup-mobile.png" alt="First-account form on a phone" width="390">
 
+### First-use wizard
+
+![Environment diagnostics in the first-use wizard](docs/screenshots/onboarding-desktop.png)
+
+<img src="docs/screenshots/onboarding-mobile.png" alt="Model response, tool call, and streaming checks on mobile" width="390">
+
 ### Web research and deliverable
 
 ![Chat and a sourced Markdown report](docs/screenshots/report-desktop.png)
@@ -49,6 +55,10 @@ The first-account screens come from the managed workspace before any account was
 The current Web UI is in Chinese; this English README documents the same product and setup.
 
 ## Current Status
+
+2026-10-09: A first-use wizard now opens when no Bot has a model configured. Its four steps cover environment checks, model connection, Bot configuration, and a first task. Reopen it with the sidebar compass button. Configure the pre-created research assistant or create a new Bot, submit a normal report Run, and open the shared desktop for human takeover. Saved profiles and Bots survive a reload; unsaved form values do not.
+
+Diagnostics check the database, Worker heartbeats within 20 seconds, Linux runtime, and artifact write/read access. Model tests verify a short text echo or tool arguments and, when selected, a completed response stream. Each test has a 20-second timeout, a 256-output-token limit, no automatic retries, and one in-flight probe per user per API process. Tests send no conversation, memory, or desktop contents; execute no external tools; and do not persist draft keys. They do call the configured model service and may incur a small charge. Public Web access awaits the first report; image recognition is explicitly unverified. Bot settings can retest a saved profile without returning its key to the browser.
 
 The first account on the managed local Web service requires an initialization token. The user-service installer creates a random token in Git-ignored `.local/setup.token` with mode `0600`. Read it locally on first visit to the [HTTPS page](https://127.0.0.1:8443/), then choose your own username and password. The token file is removed after successful account creation. Development instances may use an isolated database without `OPENGROK_SETUP_TOKEN_FILE`; the managed service always enables this check. This prevents other local processes without the token from claiming the account, but processes running as the same Unix user remain in the trusted boundary. The managed workspace still has no account.
 
@@ -135,6 +145,21 @@ Multi-Bot regression scripts are `tests/handoff-smoke.mts`, `tests/handoff-agent
 `tests/real-handoff-traex.mts` uses real TraeX Gemini for the parent and a fixed-response child Bot. It requires a fresh `opengrok_real_handoff_YYYYMMDD` database and matching dedicated `.local/` data directory, starts its own isolated Worker, checks three positive and two negative delegation cases, and clears the test model key on exit. It needs no API, Host, or desktop. This focused trial does not replace the frozen task set or a real business-outcome evaluation.
 
 `tests/parallel-bots-smoke.mts` requires a fresh `opengrok_parallel_YYYYMMDD` database named in both `OPENGROK_DB_NAME` and `OPENGROK_PARALLEL_DB_NAME`. It starts two Workers, a fake model, a fake desktop runtime, and an isolated host to verify parallel inference, serialized computer operations, and queued receipts across a host restart. It does not touch the managed desktop.
+
+## Wizard End-to-End Test
+
+With the database, desktop image, egress gateway, firewall, and `.local/tls/` certificate prepared as above, run:
+
+```sh
+pnpm --filter @opengrok/web build
+pnpm exec tsx tests/onboarding-web-smoke.mjs
+```
+
+Ports `3841/3844/3845/6081/8444` must be free. The script creates a fresh database and blank desktop container, leaving the managed account and desktop volumes untouched. It covers signup, a missing Worker and recovery, protocol/streaming variants, authentication and origin rejection, timeout and concurrency, retesting changed inputs, report publication, real noVNC navigation and return of control, 320px/390px layouts, and computer/storage failures. The default model is a local fixture. Set `OPENGROK_ONBOARDING_REAL_MODEL` and `OPENGROK_TEST_PROXY_CONFIG` to use a real model for the wizard, report, and saved-profile retest; failure cases still use the fixture. Set `OPENGROK_TEST_CHROMIUM_EXECUTABLE` when using system Chromium.
+
+Screenshots and logs stay in Git-ignored `.local/onboarding-*`. Cleanup stops temporary services, removes the temporary desktop, and clears test model keys. The database and evidence directory remain for inspection. Do not publish private logs or real-model configuration screenshots. A single report verifies this workflow, not general model quality.
+
+2026-10-09: Both the complete fixture regression and the real TraeX Gemini first-use workflow passed. The real report was checked against its recorded page read; actual takeover navigation matched Agent readback after returning control. The fixture regression also verified that upstream error bodies and test keys did not enter API logs. Neither test created a managed account. Run and artifact identifiers are recorded in [PLAN.md](PLAN.md).
 
 ## First Acceptance Path
 

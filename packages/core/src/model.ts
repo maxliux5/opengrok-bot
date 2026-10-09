@@ -299,7 +299,24 @@ export function isComputerTool(name: AgentToolName): boolean {
   return toolRegistry[name].executor === "computer";
 }
 
-export function providerModel(profile: ModelConfiguration) {
+export function validateModelConnection(input: {
+  provider: ModelProfile["provider"]; baseUrl?: string | null; apiKey?: string | null;
+}) {
+  if (input.provider === "openai-compatible" && !input.baseUrl) {
+    throw new DomainError("请填写模型 API 地址");
+  }
+  if (input.provider === "anthropic" && !input.apiKey) {
+    throw new DomainError("Anthropic 协议需要 API Key", 422, "api_key_required");
+  }
+  if (input.baseUrl) {
+    const url = new URL(input.baseUrl);
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) {
+      throw new DomainError("模型 API 地址需要 HTTPS；本机服务可使用 HTTP");
+    }
+  }
+}
+
+export function providerModel(profile: Pick<ModelConfiguration, "provider" | "modelId" | "baseUrl" | "apiKey">) {
   if (profile.provider === "anthropic") {
     if (!profile.apiKey) throw new Error("Anthropic 配置缺少 API Key");
     return createAnthropic({ apiKey: profile.apiKey,

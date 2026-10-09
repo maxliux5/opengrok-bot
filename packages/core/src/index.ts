@@ -16,3 +16,5 @@ export * from "./skills.js";
 export * from "./routines.js";
 export * from "./handoffs.js";
 export * from "./github-issues.js";
+export * from "./model-probe.js";
+export * from "./onboarding.js";

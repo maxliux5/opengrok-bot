@@ -16,6 +16,12 @@
 
 <img src="docs/screenshots/setup-mobile.png" alt="手机上的首次建号表单" width="390">
 
+### 首次使用向导
+
+![首次使用向导中的环境检查](docs/screenshots/onboarding-desktop.png)
+
+<img src="docs/screenshots/onboarding-mobile.png" alt="手机上的模型响应、工具调用与流式检查" width="390">
+
 ### 网页研究与成果
 
 ![研究助手的聊天与带来源的 Markdown 报告](docs/screenshots/report-desktop.png)
@@ -47,6 +53,10 @@
 <img src="docs/screenshots/report-mobile.png" alt="手机工作区中的 Markdown 报告与来源" width="390">
 
 ## 当前状态
+
+2026-10-09：新增首次使用向导。还没有配置模型的 Bot 时，登录后自动进入「工作环境 → 模型连接 → 配置 Bot → 首次任务」，也可从侧栏指南针按钮重新打开。向导可配置预建的研究助手或新建 Bot，提交普通报告任务，并进入真实桌面接管。已保存的模型和 Bot 刷新后保留；未保存的表单不持久化。
+
+环境诊断检查数据库、最近 20 秒内的 Worker 心跳、Linux 运行时和成果目录写入/回读。模型测试使用短请求校验文本回显或工具参数，并按配置验证流式响应；上限 20 秒、256 输出 token、无自动重试，同一 API 进程内每个用户只运行一个测试。测试不发送聊天、记忆或电脑内容，不执行外部工具，不保存草稿密钥；测试会调用配置的模型服务，可能产生少量费用。网页访问留待首份报告验证，图片识别明确标记未验证。已保存模型也可在 Bot 设置中重新测试，密钥不返回浏览器。
 
 正式本机 Web 的首个账号需要初始化口令。安装用户服务时，脚本在被 Git 忽略的 `.local/setup.token` 生成权限 0600 的随机口令；首次打开 [HTTPS 页面](https://127.0.0.1:8443/) 时从本机读取口令，在页面设置自己的用户名和密码。成功后口令文件删除。开发模式可在未配置 `OPENGROK_SETUP_TOKEN_FILE` 时使用独立测试库，正式部署始终启用该校验。口令只防止不知道文件内容的本机进程抢先建号，同 UID 进程仍属于受信任边界。正式工作空间仍无账号。
 
@@ -122,6 +132,21 @@ pnpm dev:web
 真实模型回归需要隔离测试数据库、API `3841`、Worker 和 Host `3844`。默认数据目录与开发 Host 共用电脑操作 journal，不能同时运行；若同时运行，应为测试 Host/Worker/API 显式配置独立 `OPENGROK_DATA_DIR`、桌面 runtime/VNC 端口和测试数据库，且测试 Host 设置 `OPENGROK_DESKTOP_MANAGED=0`。`pnpm exec tsx tests/real-traex-smoke.mts` 默认测 TraeX Gemini 报告及跨对话偏好；`OPENGROK_TEST_PROVIDER=anthropic OPENGROK_TEST_MODEL_ID=agy/claude-sonnet-4-6 pnpm exec tsx tests/real-traex-smoke.mts` 测同一契约的 Claude；`pnpm exec tsx tests/real-provider-switch.mts` 测同一个 Bot 从 Gemini 切到 Claude 后的状态复用。脚本读取 `OPENGROK_TEST_PROXY_CONFIG` 指向的私有文件，结束时清空测试模型配置中的加密密钥；它预期 `3841` 上有 `smoke` 测试账号，不应指向个人正式数据库。
 
 视觉链路可用 `pnpm exec tsx tests/traex-vision-smoke.mts` 单独测试 TraeX Gemini 图像输入。`tests/real-traex-vision-run.mts` 需要隔离 API、Worker、Host 和测试数据库；它会在公开表单中填入随机数字，再要求模型仅通过截图识别，并在结束时清空测试模型密钥。`tests/desktop-runtime-smoke.mjs` 验证完整桌面的截图、键鼠与 Unicode 输入；`tests/desktop-approval-invalid-smoke.mts` 验证越界和旧观察拒绝。`tests/real-traex-desktop-run.mts` 使用人工校准坐标验证真实模型、截图、审批、点击和输入链路；不把它计为自主视觉定位成功。`tests/shell-command-stop-smoke.mts` 可设置 `OPENGROK_STOP_VIA_WEB=1` 从 Web 按钮停止单条在途命令，`tests/web-shell-command-smoke.mjs` 检查终端回执的桌面和手机呈现。完整执行记录见 [PLAN.md](PLAN.md)。
+
+## 向导端到端测试
+
+准备好上述数据库、桌面镜像、出口网关、防火墙及 `.local/tls/` 证书后，运行：
+
+```sh
+pnpm --filter @opengrok/web build
+pnpm exec tsx tests/onboarding-web-smoke.mjs
+```
+
+脚本要求测试端口 `3841/3844/3845/6081/8444` 空闲，自建全新数据库和空白桌面容器，不使用正式账号或桌面卷。覆盖首次建号、缺失 Worker 与恢复、模型协议/流式矩阵、鉴权/来源检查、超时/并发、修改配置后重新测试、报告发布、noVNC 接管真实导航与归还、320px/390px 布局，以及电脑和存储故障。默认模型为本机固定响应夹具；加上 `OPENGROK_ONBOARDING_REAL_MODEL=模型ID` 和 `OPENGROK_TEST_PROXY_CONFIG` 可让向导保存、报告任务和已保存模型复测使用真实模型，其余故障用例仍使用夹具。必要时配置 `OPENGROK_TEST_CHROMIUM_EXECUTABLE`。
+
+截图和日志保留在 Git 忽略的 `.local/onboarding-*` 中，测试结束会停止临时服务、删除临时桌面、清空测试库的模型密钥；数据库和证据目录保留供核对。不要上传这些私有日志和真实模型配置截图。单次报告通过只证明这条使用路径，不替代冻结质量评测。
+
+2026-10-09：固定模型完整回归与真实 TraeX Gemini 首次使用路径均通过；真实报告已对照本次网页回读核对，接管后实际导航与归还后的 Agent 回读一致。固定模型另验证错误正文和测试密钥未进入 API 日志。两套测试没有创建正式账号，详细 Run 与成果标识见 [PLAN.md](PLAN.md)。
 
 ## 阅读入口
 

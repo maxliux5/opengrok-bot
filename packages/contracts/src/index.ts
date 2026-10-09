@@ -130,6 +130,15 @@ export const modelProfileInput = z.object({
   }).default({ text: true, tools: true, vision: false, streaming: true }),
 });
 
+export type SetupCheck = {
+  id: string;
+  label: string;
+  status: "ok" | "warning" | "error" | "unchecked";
+  detail: string;
+};
+export type WorkspaceDiagnostics = { checkedAt: string; checks: SetupCheck[] };
+export type ModelProbeResult = { ok: boolean; durationMs: number; checks: SetupCheck[] };
+
 export const runBudgetSchema = z.object({
   maxModelSteps: z.number().int().min(1).max(100),
   maxToolCalls: z.number().int().min(1).max(500),

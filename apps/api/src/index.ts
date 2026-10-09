@@ -25,6 +25,7 @@ import {
   testRoutine, updateRoutine,
   listApprovals, decideApproval,
   githubIssueConnectorStatus,
+  diagnoseWorkspace, getModelProfile, probeModel,
 } from "@opengrok/core";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
@@ -102,6 +103,26 @@ app.setErrorHandler((error, _request, reply) => {
 });
 
 app.get("/api/health", async () => ({ ok: true }));
+app.post("/api/onboarding/diagnostics", async request => {
+  await actor(request);
+  return diagnoseWorkspace();
+});
+const modelProbes = new Set<string>();
+async function runModelProbe(ownerId: string, profile: Parameters<typeof probeModel>[0]) {
+  if (modelProbes.has(ownerId)) throw new DomainError("已有模型测试正在运行", 409, "model_probe_busy");
+  modelProbes.add(ownerId);
+  try { return await probeModel(profile); }
+  finally { modelProbes.delete(ownerId); }
+}
+app.post("/api/model-profiles/test", async request => {
+  const owner = await actor(request);
+  const input = modelProfileInput.parse(request.body);
+  return runModelProbe(owner.id, { ...input, baseUrl: input.baseUrl || null, apiKey: input.apiKey || null });
+});
+app.post("/api/model-profiles/:id/test", async request => {
+  const owner = await actor(request);
+  return runModelProbe(owner.id, await getModelProfile(owner.id, idParams.parse(request.params).id));
+});
 app.get("/api/connectors/github", async request => {
   await actor(request);
   return githubIssueConnectorStatus();
